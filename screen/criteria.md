@@ -48,9 +48,11 @@ Any one of these excludes the record:
   estimating its association.
 - Under-powered. Analytic sample below N = 20.
 
-Tag the governing criterion on every exclude (for example `animal`,
+Tag the governing criterion on every exclude, using ONLY these tags: `animal`,
 `review_or_meta`, `case_report`, `no_volume_outcome`, `ses_nuisance_only`,
-`sample_lt_20`).
+`sample_lt_20`, `no_ses_measure` (no SES indicator measured at all), and
+`wrong_pub_type` (editorial, commentary, protocol, news, not a primary study).
+Records with no abstract are not excluded here; they route to the human queue.
 
 ## UNCERTAIN
 

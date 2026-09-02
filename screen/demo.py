@@ -69,6 +69,9 @@ TEMPLATES = [
      "SES and the developing brain (conference abstract)",
      "Conference abstract. We present preliminary findings on SES and brain "
      "development. Methods and sample size to follow."),
+    (6, "no_abstract",
+     "Socioeconomic status and hippocampal volume (title only)",
+     ""),
 ]
 
 
@@ -181,6 +184,7 @@ def main(argv=None) -> int:
     print(f"  exclude            : {counts.get('exclude', 0)}")
     print(f"  queued (uncertain/ : {counts.get('queued', 0)}")
     print(f"    disagreement)      ")
+    print(f"    of which no-abstract : {report.no_abstract}")
     print(f"inter-pass agreement : {report.agreements}/{report.screened} ({rate:.0%})")
     print(f"human review queue   : {queue_rows} records -> {tmp/'review_queue.csv'}")
     print(f"refmine targets      : {refmine_n} reviews/metas flagged for mining")

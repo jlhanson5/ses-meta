@@ -13,7 +13,9 @@ but harvested for their references.
    - pass A (`prompts/screen_pass_a_v1.md`) argues for inclusion
    - pass B (`prompts/screen_pass_b_v1.md`) is skeptical and argues for exclusion
    Both return strict JSON: `{decision, criteria_hit, reason, confidence}`.
-3. Aggregates the two into a final decision (`aggregate.py`):
+3. Records with no abstract skip the model entirely and route straight to the
+   human queue (`no_abstract`). A title-only record is never model-excluded.
+4. Aggregates the two into a final decision (`aggregate.py`):
    - passes disagree -> human queue (`pass_disagreement`)
    - both uncertain -> human queue (`model_uncertain`)
    - agreed exclude but either confidence < 0.8 -> human queue (`low_confidence_exclude`)
@@ -30,7 +32,11 @@ but harvested for their references.
 living humans in vivo, an SES/poverty indicator, hippocampal or amygdala volume,
 and a reported SES-to-volume association. The prompts operationalize exactly
 those rules and instruct the model to judge only from the title and abstract and
-to return `uncertain` rather than guess.
+to return `uncertain` rather than guess. Exclude tags are pinned to a fixed
+vocabulary: `schema.normalize_tags` maps off-schema tags the model invents to the
+canonical set (or `other`), so exclude analytics stay clean regardless of
+prompt wording. `screen.run` prints per-record progress (rate and ETA); use
+`--progress-every N` to thin it or `--quiet` to silence it.
 
 ## Reproducibility and caching
 

@@ -92,3 +92,50 @@ def test_decision_cache_serves_without_model_calls(db):
     assert report2.llm_calls == 0
     assert report2.cached == 8
     assert client.call_count == calls_after_first     # no new model calls
+
+
+def test_no_abstract_routes_to_queue_without_model_calls(db):
+    # a title-only record must never be model-excluded: it goes to the queue and
+    # spends zero calls.
+    add_record(db, "10.4/na", "SES and hippocampal volume (title only)", "")
+    client = ScriptedClient(responder=_responder)
+    report = screen_records(db, client)
+
+    assert report.no_abstract == 1
+    assert report.llm_calls == 0
+    assert client.call_count == 0
+    row = db.execute("SELECT final_decision, queue_reason, resolved_by "
+                     "FROM screen_status WHERE record_id='doi:10.4/na'").fetchone()
+    assert row["final_decision"] == "queued"
+    assert row["queue_reason"] == "no_abstract"
+    assert row["resolved_by"] != "human"
+
+
+def test_whitespace_abstract_treated_as_missing(db):
+    add_record(db, "10.4/ws", "title", "   \n  ")
+    client = ScriptedClient(responder=_responder)
+    report = screen_records(db, client)
+    assert report.no_abstract == 1
+    assert report.llm_calls == 0
+
+
+def test_leaked_tag_is_normalized_in_stored_decision(db):
+    # model emits an off-schema tag; the stored decision must carry the canonical one
+    def responder(prompt, system, model):
+        return json.dumps({"decision": "exclude", "criteria_hit": ["not_a_study"],
+                           "reason": "editorial", "confidence": 0.95})
+    add_record(db, "10.4/leak", "some editorial", "not a real study")
+    screen_records(db, ScriptedClient(responder=responder))
+    row = db.execute("SELECT criteria_hit FROM screen_decisions "
+                     "WHERE record_id='doi:10.4/leak' AND pass_name='A'").fetchone()
+    assert json.loads(row["criteria_hit"]) == ["wrong_pub_type"]
+
+
+def test_progress_callback_fires_per_record(db):
+    _seed(db)
+    events = []
+    screen_records(db, ScriptedClient(responder=_responder),
+                   on_progress=events.append)
+    assert len(events) == 4
+    assert [e["index"] for e in events] == [1, 2, 3, 4]
+    assert all(e["total"] == 4 for e in events)
