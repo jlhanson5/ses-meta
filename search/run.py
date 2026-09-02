@@ -37,6 +37,11 @@ API_KEY_ENV = {
     "semanticscholar": "S2_API_KEY",
 }
 
+# OpenAlex polite-pool contact email, read from the environment only. Falls back
+# to the source default when unset. A real address gets better rate limits and
+# lets OpenAlex reach you before throttling at high volume.
+MAILTO_ENV = "OPENALEX_MAILTO"
+
 
 def _setup_logging(log_dir: Path = LOG_DIR) -> logging.Logger:
     log_dir.mkdir(parents=True, exist_ok=True)
@@ -104,7 +109,11 @@ def run_search(
     for name in source_names:
         cls = SOURCES[name]
         api_key = os.environ.get(API_KEY_ENV.get(name, ""), None)
-        src = cls(raw_dir=raw_dir, run_date=run_date, api_key=api_key)
+        mailto = os.environ.get(MAILTO_ENV)
+        kwargs = {"raw_dir": raw_dir, "run_date": run_date, "api_key": api_key}
+        if mailto:
+            kwargs["mailto"] = mailto
+        src = cls(**kwargs)
         count = 0
         for q in queries:
             qstr = format_for(name, q)
