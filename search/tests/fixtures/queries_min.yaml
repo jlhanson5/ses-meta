@@ -1,0 +1,8 @@
+version: 1
+field: title_abstract
+brain:
+  - "hippocamp*"
+ses:
+  - "poverty"
+method:
+  - "structural MRI"

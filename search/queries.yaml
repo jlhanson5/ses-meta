@@ -1,0 +1,43 @@
+# Structured query blocks for the SES x subcortical-volume living meta-analysis.
+#
+# The query set is the cross product: brain x ses x method. Each triple becomes
+# one query per source, and one raw JSON file per query per run. Results are
+# unioned across sources and deduplicated, so overlap between blocks (a pipeline
+# name appearing in `brain` and a method term in `method`) is harmless: the
+# duplicates merge in the dedup layer.
+#
+# To widen or narrow the search, edit the blocks below. Do NOT hardcode full
+# query strings anywhere; search/queries.py composes them per source dialect
+# (PubMed/Europe PMC get boolean syntax, OpenAlex/Semantic Scholar get relevance
+# keyword phrases with wildcards stripped).
+
+version: 1
+
+# Which fields to target. PubMed -> [tiab], Europe PMC -> free text with
+# wildcard, OpenAlex / Semantic Scholar -> title+abstract relevance search.
+field: title_abstract
+
+brain:
+  - "hippocamp*"                 # REQUIRED (wildcard: hippocampus, hippocampal)
+  - "amygdala"                   # REQUIRED
+  - "subcortical volume"         # REQUIRED
+  - "FreeSurfer"                 # REQUIRED (pipeline name)
+  - "FSL FIRST"                  # REQUIRED (pipeline name)
+  - "voxel-based morphometry"    # REQUIRED (pipeline name)
+
+ses:
+  - "socioeconomic status"       # REQUIRED
+  - "poverty"                    # REQUIRED
+  - "income"                     # REQUIRED
+  - "income-to-needs"            # REQUIRED
+  - "parental education"         # REQUIRED
+  - "neighborhood disadvantage"  # REQUIRED
+  - "material deprivation"       # REQUIRED
+  - "area deprivation index"     # REQUIRED
+  - "social class"               # REQUIRED
+  - "financial hardship"         # REQUIRED
+
+method:
+  - "structural MRI"
+  - "gray matter volume"
+  - "brain morphometry"

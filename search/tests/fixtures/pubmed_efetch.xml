@@ -1,0 +1,85 @@
+<?xml version="1.0" ?>
+<PubmedArticleSet>
+  <PubmedArticle>
+    <MedlineCitation>
+      <PMID>30000001</PMID>
+      <Article>
+        <Journal>
+          <Title>Developmental Cognitive Neuroscience</Title>
+          <JournalIssue>
+            <PubDate><Year>2024</Year></PubDate>
+          </JournalIssue>
+        </Journal>
+        <ArticleTitle>Hippocampal volume and childhood poverty in a large cohort</ArticleTitle>
+        <Abstract>
+          <AbstractText>We examined hippocampal volume in relation to childhood poverty.</AbstractText>
+        </Abstract>
+        <AuthorList>
+          <Author><LastName>Smith</LastName><Initials>J</Initials></Author>
+          <Author><LastName>Doe</LastName><Initials>A</Initials></Author>
+        </AuthorList>
+        <ELocationID EIdType="doi" ValidYN="Y">10.1000/aaa</ELocationID>
+      </Article>
+    </MedlineCitation>
+    <PubmedData>
+      <ArticleIdList>
+        <ArticleId IdType="pubmed">30000001</ArticleId>
+        <ArticleId IdType="doi">10.1000/aaa</ArticleId>
+      </ArticleIdList>
+    </PubmedData>
+  </PubmedArticle>
+
+  <PubmedArticle>
+    <MedlineCitation>
+      <PMID>30000003</PMID>
+      <Article>
+        <Journal>
+          <Title>NeuroImage</Title>
+          <JournalIssue>
+            <PubDate><Year>2023</Year></PubDate>
+          </JournalIssue>
+        </Journal>
+        <ArticleTitle>Income-to-needs and subcortical brain volume in adolescents</ArticleTitle>
+        <Abstract>
+          <AbstractText>Income-to-needs ratio predicted subcortical brain volume.</AbstractText>
+        </Abstract>
+        <AuthorList>
+          <Author><LastName>Garcia</LastName><Initials>M</Initials></Author>
+        </AuthorList>
+      </Article>
+    </MedlineCitation>
+    <PubmedData>
+      <ArticleIdList>
+        <ArticleId IdType="pubmed">30000003</ArticleId>
+      </ArticleIdList>
+    </PubmedData>
+  </PubmedArticle>
+
+  <PubmedArticle>
+    <MedlineCitation>
+      <PMID>30000005</PMID>
+      <Article>
+        <Journal>
+          <Title>Biological Psychiatry</Title>
+          <JournalIssue>
+            <PubDate><Year>2022</Year></PubDate>
+          </JournalIssue>
+        </Journal>
+        <ArticleTitle>Parental education and amygdala development</ArticleTitle>
+        <Abstract>
+          <AbstractText>Parental education was associated with amygdala development.</AbstractText>
+        </Abstract>
+        <AuthorList>
+          <Author><LastName>Brown</LastName><Initials>K</Initials></Author>
+        </AuthorList>
+        <ELocationID EIdType="doi" ValidYN="Y">10.1000/eee</ELocationID>
+      </Article>
+    </MedlineCitation>
+    <PubmedData>
+      <ArticleIdList>
+        <ArticleId IdType="pubmed">30000005</ArticleId>
+        <ArticleId IdType="doi">10.1000/eee</ArticleId>
+      </ArticleIdList>
+    </PubmedData>
+  </PubmedArticle>
+</PubmedArticleSet>

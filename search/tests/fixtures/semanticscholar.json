@@ -1,0 +1,20 @@
+{"year_range": "2022-2026", "results": [
+  {
+    "paperId": "s2b",
+    "externalIds": {"DOI": "10.1000/bbb", "PubMed": "30000002"},
+    "title": "Amygdala morphometry and neighborhood disadvantage",
+    "abstract": "Amygdala morphometry varied with neighborhood disadvantage.",
+    "year": 2025,
+    "venue": "Cerebral Cortex",
+    "authors": [{"name": "Thanh Nguyen"}]
+  },
+  {
+    "paperId": "s2c",
+    "externalIds": {},
+    "title": "Income to needs and subcortical brain volumes in adolescents",
+    "abstract": "Income to needs predicted subcortical brain volumes.",
+    "year": 2023,
+    "venue": "NeuroImage",
+    "authors": [{"name": "Maria Garcia"}]
+  }
+]}

@@ -1,0 +1,22 @@
+{"results": [
+  {
+    "id": "https://openalex.org/W1",
+    "doi": "https://doi.org/10.1000/aaa",
+    "ids": {"pmid": "https://pubmed.ncbi.nlm.nih.gov/30000001"},
+    "title": "Hippocampal volume and childhood poverty in a large cohort",
+    "abstract_inverted_index": {"Hippocampal": [0], "volume": [1], "and": [2], "childhood": [3], "poverty": [4]},
+    "authorships": [{"author": {"display_name": "John Smith"}}, {"author": {"display_name": "Anna Doe"}}],
+    "publication_year": 2024,
+    "primary_location": {"source": {"display_name": "Developmental Cognitive Neuroscience"}}
+  },
+  {
+    "id": "https://openalex.org/W2",
+    "doi": "https://doi.org/10.1000/bbb",
+    "ids": {},
+    "title": "Amygdala morphometry and neighborhood disadvantage",
+    "abstract_inverted_index": {"Amygdala": [0], "morphometry": [1], "and": [2], "neighborhood": [3], "disadvantage": [4]},
+    "authorships": [{"author": {"display_name": "Thanh Nguyen"}}],
+    "publication_year": 2025,
+    "primary_location": {"source": {"display_name": "Cerebral Cortex"}}
+  }
+]}

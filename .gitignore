@@ -1,0 +1,19 @@
+# secrets
+.env
+
+# python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+*.egg-info/
+
+# data + logs are generated; keep the dirs (via .gitkeep) but not the contents
+data/raw/*.json
+data/db/*.db
+logs/*.log
+logs/*.jsonl
+
+# os
+.DS_Store

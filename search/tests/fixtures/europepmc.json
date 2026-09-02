@@ -1,0 +1,18 @@
+{"results": [
+  {
+    "id": "30000001", "source": "MED", "pmid": "30000001", "doi": "10.1000/aaa",
+    "title": "Hippocampal volume and childhood poverty in a large cohort",
+    "abstractText": "We examined hippocampal volume in relation to childhood poverty.",
+    "pubYear": "2024",
+    "authorList": {"author": [{"fullName": "Smith John"}, {"fullName": "Doe Anna"}]},
+    "journalInfo": {"journal": {"title": "Developmental Cognitive Neuroscience"}}
+  },
+  {
+    "id": "30000004", "source": "MED", "pmid": "30000004", "doi": "10.1000/ddd",
+    "title": "Area deprivation index and hippocampal structure in older adults",
+    "abstractText": "Area deprivation index related to hippocampal structure.",
+    "pubYear": "2025",
+    "authorList": {"author": [{"fullName": "Lee Hana"}]},
+    "journalInfo": {"journal": {"title": "Human Brain Mapping"}}
+  }
+]}
