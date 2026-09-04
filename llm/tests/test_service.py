@@ -47,3 +47,37 @@ def test_scripted_client_records_calls():
     client.complete("xyz", system="sys", model="opus")
     assert client.call_count == 2
     assert client.calls[1] == ("xyz", "sys", "opus")
+
+
+# --- regression: a reply with data after the first object must not crash ---
+
+def test_extract_stops_at_first_object():
+    # two objects separated by a blank line (the record-57 crash shape)
+    text = '{"decision": "exclude", "confidence": 0.9}\n\n{"note": "extra"}'
+    assert parse_json_object(text) == {"decision": "exclude", "confidence": 0.9}
+
+
+def test_trailing_prose_after_object():
+    text = '{"decision": "include"}\n\nHope that helps!'
+    assert parse_json_object(text) == {"decision": "include"}
+
+
+def test_braces_inside_strings_are_respected():
+    text = '{"reason": "n {beta} = 0.2", "decision": "exclude"}'
+    assert parse_json_object(text)["reason"] == "n {beta} = 0.2"
+
+
+def test_unparseable_raises_jsonerror_not_decodeerror():
+    # the guard in screen.run catches JSONError; a bare JSONDecodeError would
+    # leak past it and crash the run, which is the bug this locks down.
+    import json as _json
+    with pytest.raises(JSONError):
+        parse_json_object("{not valid json at all")
+    assert issubclass(JSONError, ValueError)
+    assert not issubclass(JSONError, _json.JSONDecodeError)
+
+
+def test_complete_json_survives_trailing_data():
+    client = ScriptedClient(
+        responder=lambda p, s, m: '{"decision": "exclude", "confidence": 0.9}\n\ntrailing')
+    assert complete_json(client, "prompt")["decision"] == "exclude"
