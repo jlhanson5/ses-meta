@@ -25,11 +25,13 @@ _BOOLEAN_SOURCES = {"pubmed", "europepmc"}
 class Query:
     brain: str
     ses: str
-    method: str
+    method: str = ""
 
     @property
-    def terms(self) -> tuple[str, str, str]:
-        return (self.brain, self.ses, self.method)
+    def terms(self) -> tuple[str, ...]:
+        # drop an empty method so a spec with no method block yields a
+        # two-term (region AND ses) query
+        return tuple(t for t in (self.brain, self.ses, self.method) if t)
 
     @property
     def id(self) -> str:
@@ -40,16 +42,22 @@ class Query:
 def load_spec(path: Path = DEFAULT_QUERIES) -> dict:
     with path.open("r", encoding="utf-8") as fh:
         spec = yaml.safe_load(fh)
-    for block in ("brain", "ses", "method"):
+    for block in ("brain", "ses"):
         if not spec.get(block):
             raise ValueError(f"queries.yaml missing non-empty '{block}' block")
     return spec
 
 
 def build_queries(spec: dict) -> list[Query]:
-    """Cross product of the three blocks, deterministically ordered."""
-    combos = itertools.product(spec["brain"], spec["ses"], spec["method"])
-    return [Query(b, s, m) for b, s, m in combos]
+    """Cross product of the blocks, deterministically ordered.
+
+    method is optional: with a method block the set is brain x ses x method (as
+    before); without one it is brain x ses, and each query carries only the
+    region and SES terms.
+    """
+    methods = spec.get("method") or [""]
+    combos = itertools.product(spec["brain"], spec["ses"], methods)
+    return [Query(b, s, m or "") for b, s, m in combos]
 
 
 def query_set_hash(queries: Iterable[Query]) -> str:
