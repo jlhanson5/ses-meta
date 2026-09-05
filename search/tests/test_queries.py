@@ -51,9 +51,26 @@ def test_two_term_pubmed_dialect():
     assert '"hippocamp*"' not in s
 
 
-def test_two_term_keyword_dialect():
+def test_europepmc_scopes_terms_to_title_and_abstract():
+    q = Query("hippocamp*", "poverty")
+    s = format_for("europepmc", q)
+    assert s == ('(TITLE:hippocamp* OR ABSTRACT:hippocamp*) AND '
+                 '(TITLE:"poverty" OR ABSTRACT:"poverty")')
+    # full-text-only matches are excluded because every term is field-bound
+    assert "TITLE:" in s and "ABSTRACT:" in s
+
+
+def test_openalex_expands_wildcard_to_real_words():
+    q = Query("hippocamp*", "socioeconomic status")
+    s = format_for("openalex", q)
+    # wildcard expanded (OpenAlex strips *), phrase quoted, joined with AND
+    assert s == '(hippocampus OR hippocampal) AND "socioeconomic status"'
+    assert "*" not in s
+
+
+def test_openalex_amygdala_simple():
     q = Query("amygdala", "income")
-    assert format_for("openalex", q) == "amygdala income"
+    assert format_for("openalex", q) == "amygdala AND income"
 
 
 # --- backward compatibility: a spec WITH a method block still works ---
@@ -68,15 +85,16 @@ def test_three_term_pubmed_dialect_still_supported():
 def test_three_term_europepmc_dialect_still_supported():
     q = Query("amygdala", "income", "gray matter volume")
     s = format_for("europepmc", q)
-    assert s == '"amygdala" AND "income" AND "gray matter volume"'
+    assert s == ('(TITLE:"amygdala" OR ABSTRACT:"amygdala") AND '
+                 '(TITLE:"income" OR ABSTRACT:"income") AND '
+                 '(TITLE:"gray matter volume" OR ABSTRACT:"gray matter volume")')
 
 
-def test_three_term_keyword_strips_wildcard():
+def test_semanticscholar_keyword_space_joined():
     q = Query("hippocamp*", "poverty", "structural MRI")
-    for src in ("openalex", "semanticscholar"):
-        s = format_for(src, q)
-        assert s == "hippocamp poverty structural MRI"
-        assert "*" not in s
+    s = format_for("semanticscholar", q)
+    assert s == '(hippocampus OR hippocampal) poverty "structural MRI"'
+    assert not s.endswith("*")
 
 
 def test_min_spec_with_method_loads(fixtures_dir: Path):

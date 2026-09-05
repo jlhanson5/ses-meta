@@ -77,9 +77,35 @@ def _render_term_boolean(term: str) -> str:
     return f'"{term}"'
 
 
+# Relevance engines (OpenAlex, Semantic Scholar) strip wildcards and match whole
+# words only, so a truncation like hippocamp* would match nothing. Expand the
+# known truncations to an explicit OR of the real words instead.
+KEYWORD_EXPANSIONS = {
+    "hippocamp*": "(hippocampus OR hippocampal)",
+}
+
+
 def _render_term_keyword(term: str) -> str:
-    """Relevance engines: strip trailing wildcard, drop quotes."""
-    return term[:-1] if term.endswith("*") else term
+    """Relevance engines: expand wildcards to real words, quote phrases."""
+    if term in KEYWORD_EXPANSIONS:
+        return KEYWORD_EXPANSIONS[term]
+    if term.endswith("*"):
+        term = term[:-1]
+    if " " in term or "-" in term:
+        return f'"{term}"'               # phrase match
+    return term
+
+
+def _render_term_epmc(term: str) -> str:
+    """Scope a term to title OR abstract so full-text-only hits are excluded.
+
+    Europe PMC searches metadata AND full text by default, which pulls in any
+    paper that merely mentions the term in its body. Binding each term to the
+    TITLE and ABSTRACT fields restricts matches to where the study is actually
+    about the term.
+    """
+    t = _render_term_boolean(term)       # quotes phrases, keeps wildcard
+    return f"(TITLE:{t} OR ABSTRACT:{t})"
 
 
 def format_for(source: str, query: Query) -> str:
@@ -88,9 +114,13 @@ def format_for(source: str, query: Query) -> str:
         parts = [f"{_render_term_boolean(t)}[tiab]" for t in query.terms]
         return " AND ".join(parts)
     if source == "europepmc":
-        parts = [_render_term_boolean(t) for t in query.terms]
+        parts = [_render_term_epmc(t) for t in query.terms]
         return " AND ".join(parts)
-    if source in ("openalex", "semanticscholar"):
-        # relevance keyword search: space-joined phrases, wildcard stripped
+    if source == "openalex":
+        # boolean AND over title+abstract (the source sets the field scope);
+        # words not joined by an operator are ANDed, but we are explicit.
+        return " AND ".join(_render_term_keyword(t) for t in query.terms)
+    if source == "semanticscholar":
+        # S2 relevance search has no boolean operators: space-join keywords.
         return " ".join(_render_term_keyword(t) for t in query.terms)
     raise ValueError(f"unknown source dialect: {source}")

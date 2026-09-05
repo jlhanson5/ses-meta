@@ -43,6 +43,9 @@ class EuropePMC(Source):
                 "pageSize": PAGE_SIZE,
                 "cursorMark": cursor,
                 "resultType": "core",
+                # Europe PMC expands queries with MeSH synonyms by default, which
+                # widens matches well beyond the terms we asked for. Turn it off.
+                "synonym": "false",
             }
             data = get_json(ENDPOINT, params=params, limiter=self.limiter)
             hits = data.get("resultList", {}).get("result", [])

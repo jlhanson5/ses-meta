@@ -50,9 +50,16 @@ class OpenAlex(Source):
         results = []
         cursor = "*"
         for _ in range(MAX_PAGES):
+            # title_and_abstract.search scopes matching to title + abstract only
+            # (the plain `search` param also matches full text, which floods the
+            # results with papers that merely mention a term in the body).
+            filt = (
+                f"title_and_abstract.search:{query},"
+                f"from_publication_date:{date_from},"
+                f"to_publication_date:{date_to}"
+            )
             params = {
-                "search": query,
-                "filter": f"from_publication_date:{date_from},to_publication_date:{date_to}",
+                "filter": filt,
                 "per-page": PER_PAGE,
                 "cursor": cursor,
                 "mailto": self.mailto,
