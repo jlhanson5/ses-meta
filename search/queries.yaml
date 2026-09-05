@@ -1,43 +1,40 @@
-# Structured query blocks for the SES x subcortical-volume living meta-analysis.
+# Query blocks. queries.py expands the cross product of the blocks into the
+# canonical query set (PubMed/Europe PMC get boolean syntax, OpenAlex/Semantic
+# Scholar get relevance keyword phrases with wildcards stripped).
 #
-# The query set is the cross product: brain x ses x method. Each triple becomes
-# one query per source, and one raw JSON file per query per run. Results are
-# unioned across sources and deduplicated, so overlap between blocks (a pipeline
-# name appearing in `brain` and a method term in `method`) is harmless: the
-# duplicates merge in the dedup layer.
-#
-# To widen or narrow the search, edit the blocks below. Do NOT hardcode full
-# query strings anywhere; search/queries.py composes them per source dialect
-# (PubMed/Europe PMC get boolean syntax, OpenAlex/Semantic Scholar get relevance
-# keyword phrases with wildcards stripped).
-
+# Design: every query is region AND ses. The outcome block is ONLY the two
+# target structures, so no query can fire without naming hippocampus or
+# amygdala. Region-agnostic terms (subcortical volume, pipeline names) and the
+# generic method block were removed: crossed against ses they generated
+# region-free queries that flooded the corpus with off-topic brain-and-SES
+# papers. Volume/MRI wording is recovered at the screening stage and by
+# reference mining, not by widening the search.
 version: 1
 
 # Which fields to target. PubMed -> [tiab], Europe PMC -> free text with
 # wildcard, OpenAlex / Semantic Scholar -> title+abstract relevance search.
 field: title_abstract
 
+# Outcome: the two target structures only. REQUIRED in every query.
 brain:
-  - "hippocamp*"                 # REQUIRED (wildcard: hippocampus, hippocampal)
-  - "amygdala"                   # REQUIRED
-  - "subcortical volume"         # REQUIRED
-  - "FreeSurfer"                 # REQUIRED (pipeline name)
-  - "FSL FIRST"                  # REQUIRED (pipeline name)
-  - "voxel-based morphometry"    # REQUIRED (pipeline name)
+  - "hippocamp*"                 # hippocampus, hippocampal
+  - "amygdala"
 
+# Exposure: kept wide on purpose (looser recall on the SES side). REQUIRED in
+# every query, one term per query, crossed against each region.
 ses:
-  - "socioeconomic status"       # REQUIRED
-  - "poverty"                    # REQUIRED
-  - "income"                     # REQUIRED
-  - "income-to-needs"            # REQUIRED
-  - "parental education"         # REQUIRED
-  - "neighborhood disadvantage"  # REQUIRED
-  - "material deprivation"       # REQUIRED
-  - "area deprivation index"     # REQUIRED
-  - "social class"               # REQUIRED
-  - "financial hardship"         # REQUIRED
+  - "socioeconomic status"
+  - "poverty"
+  - "income"
+  - "income-to-needs"
+  - "parental education"
+  - "neighborhood disadvantage"
+  - "neighborhood deprivation"
+  - "material deprivation"
+  - "area deprivation index"
+  - "social class"
+  - "financial hardship"
+  - "social benefits"
+  - "welfare receipt"
 
-method:
-  - "structural MRI"
-  - "gray matter volume"
-  - "brain morphometry"
+# No method block: queries are region AND ses only. See header.
