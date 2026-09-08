@@ -146,8 +146,16 @@ def live_fetch_unpaywall(email: str) -> FetchUnpaywall:
             data = get_json(f"{UNPAYWALL}/{doi}", params={"email": email})
         except Exception:
             return None
-        loc = (data or {}).get("best_oa_location") or {}
-        return loc.get("url_for_pdf")
+        if not data:
+            return None
+        # best_oa_location first, then any oa_location that exposes a PDF url
+        best = data.get("best_oa_location") or {}
+        if best.get("url_for_pdf"):
+            return best["url_for_pdf"]
+        for loc in data.get("oa_locations", []) or []:
+            if loc.get("url_for_pdf"):
+                return loc["url_for_pdf"]
+        return None
 
     return fetch
 

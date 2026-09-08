@@ -56,19 +56,27 @@ def _fetchers(email: str):
 
 def run_extraction(conn, client: LLMClient, *, fetchers: dict,
                    limit: Optional[int] = None, model: Optional[str] = None,
-                   on_progress=None) -> RunReport:
+                   on_progress=None, resolver=None) -> RunReport:
     extract_prompt = load_prompt(EXTRACT)
     verify_prompt = load_prompt(VERIFY)
     studies = edb.included_studies(conn)
     if limit is not None:
         studies = studies[:limit]
 
+    # resolve PMCIDs up front so Europe PMC XML (tier 1) can fire; studies not in
+    # PMC simply fall through to the PDF tiers.
+    records = [dict(r) for r in studies]
+    if resolver is not None:
+        pmcids = resolver(records)
+        for rec in records:
+            if rec["id"] in pmcids:
+                rec["pmcid"] = pmcids[rec["id"]]
+
     report = RunReport(studies=len(studies), retrieved=0)
     null_counts = {f: 0 for f in PROVENANCE_FIELDS}
     total_numeric_cells = 0
 
-    for idx, rec in enumerate(studies, 1):
-        record = dict(rec)
+    for idx, record in enumerate(records, 1):
         ret = retrieve_one(record, **fetchers)
         edb.record_retrieval(conn, ret.study_id, ret.status, ret.detail)
         if not ret.ok:
@@ -146,8 +154,16 @@ def main(argv: Optional[list[str]] = None) -> int:
 
     conn = edb.connect(args.db)
     client = _build_client(args.model)
+    from .resolve import live_resolver
+    resolver_fetch = live_resolver(email=args.email)
+
+    def resolver(records):
+        from .resolve import resolve_pmcids
+        return resolve_pmcids(records, resolver_fetch)
+
     report = run_extraction(conn, client, fetchers=_fetchers(args.email),
-                            limit=args.limit, model=args.model, on_progress=_progress)
+                            limit=args.limit, model=args.model,
+                            on_progress=_progress, resolver=resolver)
     from .review_queue import build_queue
     qn = build_queue(conn)
     exported = edb.export_effects_csv(conn, EFFECTS_CSV)
