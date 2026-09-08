@@ -64,7 +64,29 @@ def test_manual_drop_uses_slugged_id(tmp_path):
     assert r.status == "manual_pdf" and r.ok
 
 
-def test_unretrieved_when_nothing_available(tmp_path):
+def test_html_served_at_pdf_url_is_a_miss_not_a_crash(tmp_path):
+    # Unpaywall points at a "pdf" that is actually an HTML landing page.
+    rec = {"id": "s5", "doi": "10.1/h", "pmid": None}
+    r = retrieve_one(rec, cache_dir=tmp_path / "cache",
+                     **_fetchers(xml=None, unpaywall="http://x/landing",
+                                 pdf=b"<!DOCTYPE html><html>paywall</html>"))
+    assert r.status == "unretrieved" and not r.ok
+    # nothing was written, since the bytes were not a PDF
+    assert not (tmp_path / "cache").exists() or not list((tmp_path / "cache").iterdir())
+
+
+def test_corrupt_pdf_is_a_miss_not_a_crash(tmp_path):
+    # bytes start with %PDF but are truncated/garbage; pdf_to_doc raises.
+    def boom(path, sid, source):
+        raise ValueError("Stream has ended unexpectedly")
+    rec = {"id": "s6", "doi": "10.1/c", "pmid": None}
+    r = retrieve_one(
+        rec, cache_dir=tmp_path / "cache",
+        fetch_xml=lambda p: None,
+        fetch_unpaywall=lambda d: "http://x/y.pdf",
+        fetch_pdf_bytes=lambda u: b"%PDF-1.4 truncated",
+        pdf_to_doc=boom)
+    assert r.status == "unretrieved" and not r.ok
     rec = {"id": "s4", "doi": None, "pmid": None}
     r = retrieve_one(rec, manual_dir=tmp_path / "none", **_fetchers())
     assert r.status == "unretrieved" and not r.ok

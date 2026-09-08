@@ -76,17 +76,17 @@ def retrieve_one(record: dict, *, fetch_xml: FetchXml, fetch_unpaywall: FetchUnp
         pdf_url = fetch_unpaywall(doi)
         if pdf_url:
             data = fetch_pdf_bytes(pdf_url)
-            if data:
+            if data and _looks_like_pdf(data):
                 path = _write_cache(sid, data, cache_dir)
-                doc = pdf_to_doc(path, sid, "unpaywall_pdf")
-                if doc.segments:
+                doc = _safe_pdf_to_doc(pdf_to_doc, path, sid, "unpaywall_pdf")
+                if doc and doc.segments:
                     return Retrieval(sid, "unpaywall_pdf", pdf_url, doc)
 
     # 3. manual drop
     manual = manual_dir / f"{_slug(sid)}.pdf"
     if manual.exists():
-        doc = pdf_to_doc(manual, sid, "manual_pdf")
-        if doc.segments:
+        doc = _safe_pdf_to_doc(pdf_to_doc, manual, sid, "manual_pdf")
+        if doc and doc.segments:
             return Retrieval(sid, "manual_pdf", str(manual), doc)
 
     return Retrieval(sid, "unretrieved",
@@ -109,6 +109,21 @@ def _pmcid_from_raw(record: dict) -> Optional[str]:
 def _slug(study_id: str) -> str:
     """Filesystem-safe stem for a study id (ids look like 'doi:10.1/abc')."""
     return re.sub(r"[^A-Za-z0-9._-]", "_", study_id)
+
+
+def _looks_like_pdf(data: bytes) -> bool:
+    """A real PDF starts with %PDF. Publishers often serve an HTML landing page
+    at a 'pdf' URL; those must not be saved and parsed as PDFs."""
+    return data[:5].startswith(b"%PDF")
+
+
+def _safe_pdf_to_doc(pdf_to_doc, path, sid, source):
+    """Parse a PDF, but treat any parser failure as a miss (return None) rather
+    than letting one corrupt download crash a whole-corpus run."""
+    try:
+        return pdf_to_doc(path, sid, source)
+    except Exception:
+        return None
 
 
 def _write_cache(study_id: str, data: bytes, cache_dir: Path) -> Path:

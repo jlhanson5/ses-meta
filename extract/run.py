@@ -86,7 +86,17 @@ def run_extraction(conn, client: LLMClient, *, fetchers: dict,
             if on_progress:
                 on_progress(idx, len(records), record["id"], "already_extracted", 0)
             continue
-        ret = retrieve_one(record, **fetchers)
+        try:
+            ret = retrieve_one(record, **fetchers)
+        except Exception as exc:
+            # one bad study (corrupt download, parser blowup, transient network)
+            # must not abort a 107-study run. Record it and move on.
+            edb.record_retrieval(conn, record["id"], "unretrieved",
+                                 f"retrieval error: {str(exc)[:150]}")
+            report.unretrieved.append(record["id"])
+            if on_progress:
+                on_progress(idx, len(records), record["id"], "error", 0)
+            continue
         edb.record_retrieval(conn, ret.study_id, ret.status, ret.detail)
         if not ret.ok:
             report.unretrieved.append(ret.study_id)
