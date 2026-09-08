@@ -1,0 +1,32 @@
+{
+  "version": "1",
+  "unit": "one row per effect (not per study)",
+  "provenance_rule": "Every numeric field must carry a page/locator and a verbatim quote (<=25 words) it came from. A numeric field with no locatable source is null with extraction_confidence 0. Never a guess.",
+  "no_conversion_rule": "Effect sizes are extracted exactly as reported. No standardization or conversion here; that happens in step 4 in R.",
+  "numeric_fields": ["n", "mean_age", "pct_female", "effect_value", "se_or_ci", "p_value"],
+  "fields": {
+    "study_id": {"type": "string", "required": true, "note": "records.id of the source study"},
+    "cohort_name": {"type": "string", "nullable": true, "note": "verbatim cohort/sample name as reported"},
+    "sample_overlap_group": {"type": "string", "nullable": true, "note": "assigned from the known-cohort registry; null + flagged when unrecognized"},
+    "n": {"type": "number", "nullable": true, "provenance": true, "note": "analytic sample size for this effect"},
+    "mean_age": {"type": "number", "nullable": true, "provenance": true},
+    "age_range": {"type": "string", "nullable": true, "provenance": true},
+    "pct_female": {"type": "number", "nullable": true, "provenance": true},
+    "sample_type": {"type": "enum", "values": ["community", "clinical", "high-risk"], "nullable": true},
+    "ses_construct": {"type": "enum", "values": ["income", "income-to-needs", "parental education", "composite", "neighborhood", "subjective", "material deprivation"], "nullable": true},
+    "ses_timing": {"type": "enum", "values": ["concurrent", "early childhood", "retrospective"], "nullable": true},
+    "roi": {"type": "enum", "values": ["hippocampus", "amygdala"], "required": true},
+    "hemisphere": {"type": "enum", "values": ["left", "right", "bilateral", "mean"], "nullable": true},
+    "volume_pipeline": {"type": "string", "nullable": true, "note": "FreeSurfer version / FSL FIRST / VBM / manual tracing"},
+    "icv_adjustment": {"type": "enum", "values": ["none", "covariate", "proportion", "residual"], "nullable": true},
+    "covariates": {"type": "list", "nullable": true},
+    "effect_type": {"type": "enum", "values": ["r", "partial r", "beta", "d", "t", "F", "raw group means"], "nullable": true},
+    "effect_value": {"type": "number", "nullable": true, "provenance": true},
+    "se_or_ci": {"type": "string", "nullable": true, "provenance": true, "note": "standard error or confidence interval, as reported"},
+    "p_value": {"type": "number", "nullable": true, "provenance": true},
+    "direction_coded_positive_means_higher_SES_larger_volume": {"type": "boolean", "nullable": true, "note": "true if the sign is oriented so positive = higher SES with larger volume"},
+    "page_number": {"type": "string", "nullable": true, "note": "page number for PDFs, or section/table locator for XML with no pages"},
+    "verbatim_quote": {"type": "string", "nullable": true, "note": "<=25 words, the text or table cell the effect_value came from"},
+    "extraction_confidence": {"type": "number", "min": 0, "max": 1, "required": true}
+  }
+}

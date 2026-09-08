@@ -17,3 +17,7 @@ logs/*.jsonl
 
 # os
 .DS_Store
+data/pdfs/
+data/fulltext/
+data/effects.csv
+extract/review_queue.csv
