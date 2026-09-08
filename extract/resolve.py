@@ -100,17 +100,24 @@ def build_converter_url(ids: list[str], tool: str, email: str) -> str:
 
 
 def live_resolver(tool: str = "ses-meta", email: str = "meta-analysis@example.org") -> ConvFetch:
-    from search.http import RateLimiter, get_json
+    import json
+    import urllib.request
+
+    from search.http import RateLimiter
     limiter = RateLimiter(0.34)          # ~3 req/s, polite for NCBI
-    ua = {"User-Agent": f"{tool}/1.0 (mailto:{email})"}
+    ua = f"{tool}/1.0 (mailto:{email})"
 
     def fetch(ids: list[str]) -> Optional[dict]:
-        # commas kept literal in the URL (params left out so requests will not
-        # re-encode them); rate-limited with backoff so a throttled resolve
-        # retries rather than silently returning nothing.
+        # NCBI's PMC id-converter 403s the requests client regardless of headers
+        # (it fingerprints the client), but serves urllib fine, so this endpoint
+        # is called with urllib directly rather than through the requests-based
+        # get_json. Rate-limited so a bulk resolve stays polite.
         url = build_converter_url(ids, tool, email)
+        limiter.wait()
         try:
-            return get_json(url, headers=ua, limiter=limiter)
+            req = urllib.request.Request(url, headers={"User-Agent": ua})
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                return json.loads(resp.read().decode("utf-8", "replace"))
         except Exception:
             return None
 
