@@ -22,6 +22,8 @@ REGISTRY: dict[str, list[str]] = {
     "Generation R": ["generation r", "gen r"],
     "ALSPAC": ["alspac", "avon longitudinal study"],
     "Dunedin": ["dunedin", "dunedin multidisciplinary"],
+    "KHANDLE": ["khandle", "kaiser healthy aging and diverse life experiences"],
+    "STAR": ["study of healthy aging in african americans", "star study"],
 }
 
 

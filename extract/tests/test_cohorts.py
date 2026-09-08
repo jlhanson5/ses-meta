@@ -25,3 +25,11 @@ def test_registry_helpers():
     assert is_known("ABCD")
     assert not is_known("Nope")
     assert "Dunedin" in all_groups()
+
+
+def test_khandle_and_star_registered():
+    assert assign_overlap_group("KHANDLE") == "KHANDLE"
+    assert assign_overlap_group(
+        "Kaiser Healthy Aging and Diverse Life Experiences Study") == "KHANDLE"
+    assert assign_overlap_group(
+        None, text="the Study of Healthy Aging in African Americans (STAR)") == "STAR"

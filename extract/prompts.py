@@ -13,7 +13,7 @@ from pathlib import Path
 
 PROMPTS_DIR = Path(__file__).resolve().parent / "prompts"
 
-EXTRACT = "extract_v1"
+EXTRACT = "extract_v2"
 VERIFY = "verify_v1"
 
 
