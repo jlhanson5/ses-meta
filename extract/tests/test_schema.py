@@ -32,7 +32,7 @@ def test_sourced_numeric_survives():
     eff = parse_effect(_base(), study_id="s1")
     assert eff.effect_value == 0.2
     assert eff.n == 200
-    assert eff.p_value == 0.01
+    assert eff.p_value == "0.01"   # reported string, not coerced
 
 
 def test_numeric_without_provenance_is_nulled():
@@ -66,3 +66,13 @@ def test_enum_valid_passes():
 def test_confidence_clamped():
     eff = parse_effect(_base(extraction_confidence=5), study_id="s1")
     assert eff.extraction_confidence == 1.0
+
+
+def test_p_value_inequality_preserved_not_coerced():
+    obj = _base(p_value="< .001",
+                provenance={
+                    "effect_value": {"page": "Table 2", "quote": "r = 0.2"},
+                    "n": {"page": "Table 2", "quote": "N = 200"},
+                    "p_value": {"page": "Table 2", "quote": "P < .001"}})
+    eff = parse_effect(obj, study_id="s1")
+    assert eff.p_value == "< .001"     # verbatim, never turned into a float

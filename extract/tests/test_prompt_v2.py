@@ -17,3 +17,11 @@ def test_v2_requires_demographic_provenance():
 def test_v2_keeps_no_inference_rule():
     t = " ".join(load_prompt(EXTRACT).template.lower().split())
     assert "do not compute, infer, or estimate" in t
+
+
+def test_verify_prompt_is_v2_and_number_tolerant():
+    from extract.prompts import VERIFY
+    assert VERIFY == "verify_v2"
+    t = " ".join(load_prompt(VERIFY).template.lower().split())
+    assert "match on the number itself" in t
+    assert "dash style" in t

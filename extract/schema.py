@@ -56,7 +56,7 @@ class Effect:
     effect_type: str | None = None
     effect_value: float | None = None
     se_or_ci: str | None = None
-    p_value: float | None = None
+    p_value: str | None = None
     direction_coded_positive_means_higher_SES_larger_volume: bool | None = None
     page_number: str | None = None
     verbatim_quote: str | None = None
@@ -78,6 +78,13 @@ def _num(v: Any) -> float | None:
         return float(v)
     except (TypeError, ValueError):
         return None
+
+
+def _pstr(v: Any) -> str | None:
+    """Preserve a reported value verbatim as a string (p-values may be '< .001')."""
+    if v is None or v == "":
+        return None
+    return str(v).strip()
 
 
 def _enum(field_name: str, v: Any) -> str | None:
@@ -126,7 +133,7 @@ def parse_effect(obj: dict, *, study_id: str) -> Effect:
         effect_type=_enum("effect_type", obj.get("effect_type")),
         effect_value=_num(obj.get("effect_value")),
         se_or_ci=(str(obj["se_or_ci"]) if obj.get("se_or_ci") else None),
-        p_value=_num(obj.get("p_value")),
+        p_value=_pstr(obj.get("p_value")),
         direction_coded_positive_means_higher_SES_larger_volume=(
             bool(obj["direction_coded_positive_means_higher_SES_larger_volume"])
             if obj.get("direction_coded_positive_means_higher_SES_larger_volume") is not None

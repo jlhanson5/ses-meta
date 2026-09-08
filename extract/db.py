@@ -48,7 +48,7 @@ CREATE TABLE IF NOT EXISTS effects (
     effect_type  TEXT,
     effect_value REAL,
     se_or_ci     TEXT,
-    p_value      REAL,
+    p_value      TEXT,
     direction_coded_positive_means_higher_SES_larger_volume INTEGER,
     page_number  TEXT,
     verbatim_quote TEXT,

@@ -14,7 +14,7 @@ from pathlib import Path
 PROMPTS_DIR = Path(__file__).resolve().parent / "prompts"
 
 EXTRACT = "extract_v2"
-VERIFY = "verify_v1"
+VERIFY = "verify_v2"
 
 
 @dataclass(frozen=True)

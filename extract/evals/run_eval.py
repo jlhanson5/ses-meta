@@ -42,8 +42,19 @@ def _match(extracted, gold_eff):
     return None
 
 
+import re as _re
+
+
+def _to_num(v):
+    if v is None:
+        return None
+    m = _re.search(r"-?\d*\.?\d+", str(v))
+    return float(m.group()) if m else None
+
+
 def _num_ok(got, want) -> bool:
-    return got is not None and want is not None and abs(float(got) - float(want)) <= TOL
+    g, w = _to_num(got), _to_num(want)
+    return g is not None and w is not None and abs(g - w) <= TOL
 
 
 def evaluate(client, *, model=None, gold_path: Path = GOLD) -> dict:
