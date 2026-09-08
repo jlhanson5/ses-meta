@@ -98,3 +98,11 @@ def test_batch_used_when_it_works_no_needless_fallback():
     got = resolve_pmcids(recs, fetch, chunk=50)
     assert len(got) == 3
     assert calls == [["0", "1", "2"]]         # one batch, no per-id fallback
+
+
+def test_converter_url_points_at_current_endpoint():
+    from extract.resolve import build_converter_url
+    url = build_converter_url(["1"], "ses-meta", "me@x.edu")
+    # the old /pmc/utils/idconv/v1.0/ endpoint was retired (redirects to a 403);
+    # the resolver must target the current articles API.
+    assert "pmc.ncbi.nlm.nih.gov/tools/idconv/api/v1/articles" in url

@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from typing import Callable, Iterable, Optional
 
-CONVERTER = "https://www.ncbi.nlm.nih.gov/pmc/utils/idconv/v1.0/"
+CONVERTER = "https://pmc.ncbi.nlm.nih.gov/tools/idconv/api/v1/articles/"
 
 # a fetch takes a list of ids and returns the parsed converter JSON (or None)
 ConvFetch = Callable[[list[str]], Optional[dict]]
