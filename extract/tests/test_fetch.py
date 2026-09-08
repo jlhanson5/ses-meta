@@ -40,6 +40,30 @@ def test_falls_back_to_manual_drop(tmp_path):
     assert r.status == "manual_pdf" and r.ok
 
 
+def test_slash_in_study_id_does_not_crash_write(tmp_path):
+    # ids look like 'doi:10.1007/s11357-023-00780-y'; the slash must not be
+    # treated as a directory separator when caching the PDF.
+    rec = {"id": "doi:10.1007/s11357-023-00780-y", "doi": "10.1007/s11357-023-00780-y",
+           "pmid": None}
+    r = retrieve_one(rec, cache_dir=tmp_path / "cache",
+                     **_fetchers(xml=None, unpaywall="http://x/y.pdf", pdf=b"%PDF fake"))
+    assert r.status == "unpaywall_pdf" and r.ok
+    # exactly one file, written flat, no nested doi:10.1007/ directory
+    written = list((tmp_path / "cache").iterdir())
+    assert len(written) == 1 and written[0].suffix == ".pdf"
+
+
+def test_manual_drop_uses_slugged_id(tmp_path):
+    manual = tmp_path / "manual"
+    manual.mkdir()
+    sid = "doi:10.1/xyz"
+    from extract.fetch import _slug
+    (manual / f"{_slug(sid)}.pdf").write_bytes(b"%PDF fake")
+    rec = {"id": sid, "doi": None, "pmid": None}
+    r = retrieve_one(rec, manual_dir=manual, **_fetchers(xml=None, unpaywall=None, pdf=None))
+    assert r.status == "manual_pdf" and r.ok
+
+
 def test_unretrieved_when_nothing_available(tmp_path):
     rec = {"id": "s4", "doi": None, "pmid": None}
     r = retrieve_one(rec, manual_dir=tmp_path / "none", **_fetchers())

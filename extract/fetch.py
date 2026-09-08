@@ -18,6 +18,7 @@ Nothing here ever deletes a PDF.
 """
 from __future__ import annotations
 
+import re
 import json
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -82,7 +83,7 @@ def retrieve_one(record: dict, *, fetch_xml: FetchXml, fetch_unpaywall: FetchUnp
                     return Retrieval(sid, "unpaywall_pdf", pdf_url, doc)
 
     # 3. manual drop
-    manual = manual_dir / f"{sid}.pdf"
+    manual = manual_dir / f"{_slug(sid)}.pdf"
     if manual.exists():
         doc = pdf_to_doc(manual, sid, "manual_pdf")
         if doc.segments:
@@ -105,10 +106,15 @@ def _pmcid_from_raw(record: dict) -> Optional[str]:
     return None
 
 
+def _slug(study_id: str) -> str:
+    """Filesystem-safe stem for a study id (ids look like 'doi:10.1/abc')."""
+    return re.sub(r"[^A-Za-z0-9._-]", "_", study_id)
+
+
 def _write_cache(study_id: str, data: bytes, cache_dir: Path) -> Path:
     cache_dir = Path(cache_dir)
     cache_dir.mkdir(parents=True, exist_ok=True)
-    path = cache_dir / f"{study_id}.pdf"
+    path = cache_dir / f"{_slug(study_id)}.pdf"
     path.write_bytes(data)
     return path
 
