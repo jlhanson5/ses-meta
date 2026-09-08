@@ -23,5 +23,6 @@ def test_verify_prompt_is_v2_and_number_tolerant():
     from extract.prompts import VERIFY
     assert VERIFY == "verify_v2"
     t = " ".join(load_prompt(VERIFY).template.lower().split())
-    assert "match on the number itself" in t
+    assert "every number it contains appears in the quote" in t
+    assert "range" in t
     assert "dash style" in t

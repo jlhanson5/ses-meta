@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import csv
 import hashlib
+import json
 import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
@@ -58,6 +59,7 @@ CREATE TABLE IF NOT EXISTS effects (
     review_reason TEXT,
     prompt_hash  TEXT,
     model_version TEXT,
+    provenance   TEXT,
     created_at   TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_effects_study ON effects(study_id);
@@ -131,9 +133,10 @@ def save_effect(conn: sqlite3.Connection, eff: Effect, *, prompt_hash: str,
     row = eff.to_row()
     cols = ["effect_key"] + ROW_COLUMNS + [
         "verified", "needs_review", "review_reason", "prompt_hash",
-        "model_version", "created_at"]
+        "model_version", "provenance", "created_at"]
     vals = [key] + [row[c] for c in ROW_COLUMNS] + [
-        verified, int(needs_review), review_reason, prompt_hash, model_version, _now()]
+        verified, int(needs_review), review_reason, prompt_hash, model_version,
+        json.dumps(eff.provenance or {}), _now()]
     placeholders = ",".join("?" for _ in cols)
     conn.execute(
         f"INSERT OR IGNORE INTO effects ({','.join(cols)}) VALUES ({placeholders})",

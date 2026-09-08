@@ -157,3 +157,29 @@ def _enforce_provenance(eff: Effect) -> None:
     # the effect is only as trustworthy as its headline number
     if eff.effect_value is None:
         eff.extraction_confidence = 0.0
+
+
+def effect_from_row(row) -> Effect:
+    """Rebuild an Effect from a stored DB row (for re-verification).
+
+    Restores the per-field provenance from the persisted JSON so verification can
+    be re-run without re-extracting. Fields not needed by verification are filled
+    best-effort; the numeric fields, confidence, quote, and provenance are exact.
+    """
+    import json as _json
+    prov = {}
+    try:
+        prov = _json.loads(row["provenance"]) if row["provenance"] else {}
+    except (TypeError, ValueError):
+        prov = {}
+    return Effect(
+        study_id=row["study_id"],
+        roi=row["roi"],
+        extraction_confidence=row["extraction_confidence"] or 0.0,
+        n=row["n"], mean_age=row["mean_age"], age_range=row["age_range"],
+        pct_female=row["pct_female"], effect_type=row["effect_type"],
+        effect_value=row["effect_value"], se_or_ci=row["se_or_ci"],
+        p_value=row["p_value"], hemisphere=row["hemisphere"],
+        page_number=row["page_number"], verbatim_quote=row["verbatim_quote"],
+        provenance=prov,
+    )
