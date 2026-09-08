@@ -31,55 +31,86 @@ def _norm_doi(doi: str | None) -> str | None:
 
 
 def resolve_pmcids(records: Iterable[dict], fetch: ConvFetch,
-                   chunk: int = 200) -> dict[str, str]:
-    """Return {study_id: pmcid} for studies the converter recognizes."""
+                   chunk: int = 50) -> dict[str, str]:
+    """Return {study_id: pmcid} for studies the converter recognizes.
+
+    The NCBI ID Converter wants a single id TYPE per request and a bounded URL,
+    so PMIDs and DOIs are sent in separate, small, chunked requests. Mixing
+    types or sending 100+ long DOIs in one request returns nothing, which is why
+    a full-corpus batch silently resolved zero PMCIDs.
+    """
     records = list(records)
-    # prefer PMID (numeric, unambiguous); fall back to DOI
     id_to_study: dict[str, str] = {}
-    send: list[str] = []
+    pmids: list[str] = []
+    dois: list[str] = []
     for r in records:
         sid = r["id"]
         pmid = r.get("pmid")
         doi = _norm_doi(r.get("doi"))
         if pmid:
             id_to_study[str(pmid)] = sid
-            send.append(str(pmid))
+            pmids.append(str(pmid))
         elif doi:
             id_to_study[doi] = sid
-            send.append(doi)
+            dois.append(doi)
 
     out: dict[str, str] = {}
-    for i in range(0, len(send), chunk):
-        batch = send[i:i + chunk]
-        data = fetch(batch)
+
+    def ingest(data: Optional[dict]) -> int:
         if not data:
-            continue
+            return 0
+        n = 0
         for rec in data.get("records", []):
             pmcid = rec.get("pmcid")
             if not pmcid:
                 continue
-            # match the returned record back to a study via pmid or doi
             key = str(rec.get("pmid") or "") or _norm_doi(rec.get("doi")) or ""
             sid = id_to_study.get(key)
             if sid is None and rec.get("doi"):
                 sid = id_to_study.get(_norm_doi(rec["doi"]))
             if sid:
                 out[sid] = pmcid
+                n += 1
+        return n
+
+    for stream in (pmids, dois):
+        for i in range(0, len(stream), chunk):
+            batch = stream[i:i + chunk]
+            if ingest(fetch(batch)) == 0 and len(batch) > 1:
+                # a batch that resolves nothing falls back to per-id calls, the
+                # single-id path that is known to work, so a rejected batch or
+                # one bad id never zeroes the whole resolve.
+                for one in batch:
+                    ingest(fetch([one]))
     return out
 
 
-def live_resolver(tool: str = "ses-meta", email: str = "meta-analysis@example.org") -> ConvFetch:
-    import json
+def build_converter_url(ids: list[str], tool: str, email: str) -> str:
+    """Converter URL with LITERAL commas in ids.
+
+    requests percent-encodes commas by default ('111,222' -> '111%2C222'), and
+    the converter does not decode them, so a multi-id batch resolves nothing
+    while a single id works. Keep commas literal.
+    """
     import urllib.parse
-    import urllib.request
+    q = urllib.parse.urlencode(
+        {"ids": ",".join(ids), "format": "json", "tool": tool, "email": email},
+        safe=",")
+    return f"{CONVERTER}?{q}"
+
+
+def live_resolver(tool: str = "ses-meta", email: str = "meta-analysis@example.org") -> ConvFetch:
+    from search.http import RateLimiter, get_json
+    limiter = RateLimiter(0.34)          # ~3 req/s, polite for NCBI
+    ua = {"User-Agent": f"{tool}/1.0 (mailto:{email})"}
 
     def fetch(ids: list[str]) -> Optional[dict]:
-        params = urllib.parse.urlencode(
-            {"ids": ",".join(ids), "format": "json", "tool": tool, "email": email})
-        url = f"{CONVERTER}?{params}"
+        # commas kept literal in the URL (params left out so requests will not
+        # re-encode them); rate-limited with backoff so a throttled resolve
+        # retries rather than silently returning nothing.
+        url = build_converter_url(ids, tool, email)
         try:
-            with urllib.request.urlopen(url, timeout=30) as resp:
-                return json.loads(resp.read().decode("utf-8", "replace"))
+            return get_json(url, headers=ua, limiter=limiter)
         except Exception:
             return None
 

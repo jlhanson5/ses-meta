@@ -40,11 +40,61 @@ def test_batching_calls_in_chunks():
         return {"records": []}
 
     resolve_pmcids(RECORDS, counting_fetch, chunk=2)
-    assert len(calls) == 2                     # 3 sendable ids (+1 pmid) -> 2 chunks
     assert all(len(c) <= 2 for c in calls)
+
+
+def test_pmids_and_dois_sent_in_separate_requests():
+    # a request must be single-type: PMIDs together, DOIs together, never mixed.
+    calls = []
+
+    def spy(ids):
+        calls.append(list(ids))
+        return {"records": []}
+
+    resolve_pmcids(RECORDS, spy, chunk=50)
+    for c in calls:
+        looks_doi = ["/" in i for i in c]
+        assert all(looks_doi) or not any(looks_doi), f"mixed-type batch: {c}"
 
 
 def test_norm_doi():
     assert _norm_doi("https://doi.org/10.1/X") == "10.1/x"
     assert _norm_doi("doi:10.1/Y") == "10.1/y"
     assert _norm_doi(None) is None
+
+
+def test_converter_url_keeps_commas_literal():
+    from extract.resolve import build_converter_url
+    url = build_converter_url(["111", "222", "333"], "ses-meta", "me@x.edu")
+    assert "ids=111,222,333" in url          # literal commas, not %2C
+    assert "%2C" not in url
+
+
+def test_per_id_fallback_when_batch_returns_nothing():
+    # simulate NCBI: any multi-id request returns nothing (the comma bug); only
+    # single-id requests resolve. resolve_pmcids must still recover all via fallback.
+    table = {"111": "PMC1", "222": "PMC2", "333": "PMC3"}
+
+    def fetch(ids):
+        if len(ids) != 1:
+            return {"records": []}            # batch fails
+        i = ids[0]
+        return {"records": [{"pmid": i, "pmcid": table[i]}]} if i in table else {"records": []}
+
+    recs = [{"id": f"s{i}", "pmid": p, "doi": None}
+            for i, p in enumerate(["111", "222", "333"])]
+    got = resolve_pmcids(recs, fetch, chunk=50)
+    assert got == {"s0": "PMC1", "s1": "PMC2", "s2": "PMC3"}
+
+
+def test_batch_used_when_it_works_no_needless_fallback():
+    calls = []
+
+    def fetch(ids):
+        calls.append(list(ids))
+        return {"records": [{"pmid": i, "pmcid": f"PMC{i}"} for i in ids]}
+
+    recs = [{"id": f"s{i}", "pmid": str(i), "doi": None} for i in range(3)]
+    got = resolve_pmcids(recs, fetch, chunk=50)
+    assert len(got) == 3
+    assert calls == [["0", "1", "2"]]         # one batch, no per-id fallback
