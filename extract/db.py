@@ -95,9 +95,28 @@ def connect(db_path: Path) -> sqlite3.Connection:
 
 
 def effect_key(eff: Effect, prompt_hash: str) -> str:
+    # Include effect_value and covariates so genuinely distinct effects from one
+    # study (Model 1 vs Model 2, adjusted vs unadjusted) get distinct keys and
+    # are not silently collapsed by INSERT OR IGNORE. Two rows identical on all
+    # of these are true duplicates and still dedupe.
+    covs = "|".join(eff.covariates or [])
     parts = [eff.study_id, eff.roi, eff.hemisphere or "", eff.ses_construct or "",
-             eff.ses_timing or "", eff.effect_type or "", prompt_hash]
+             eff.ses_timing or "", eff.effect_type or "",
+             "" if eff.effect_value is None else repr(eff.effect_value),
+             covs, prompt_hash]
     return hashlib.sha256("|".join(parts).encode("utf-8")).hexdigest()[:20]
+
+
+def study_extracted(conn: sqlite3.Connection, study_id: str, prompt_hash: str) -> bool:
+    """True if this study already has at least one effect under this prompt hash.
+
+    Used to skip re-extraction on re-runs: studies with effects are done, while
+    studies that yielded nothing (unretrieved or no effects) are retried.
+    """
+    return conn.execute(
+        "SELECT 1 FROM effects WHERE study_id=? AND prompt_hash=? LIMIT 1",
+        (study_id, prompt_hash),
+    ).fetchone() is not None
 
 
 def effect_exists(conn: sqlite3.Connection, key: str) -> bool:

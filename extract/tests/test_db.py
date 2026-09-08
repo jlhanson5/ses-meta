@@ -36,6 +36,30 @@ def test_distinct_effects_distinct_rows(db):
     assert db.execute("SELECT COUNT(*) FROM effects").fetchone()[0] == 2
 
 
+def test_same_key_fields_different_value_both_persist(db):
+    # Model 1 vs Model 2: same roi/hemisphere/construct/timing/type, different
+    # beta. These are distinct effects and must NOT collapse to one row.
+    edb.save_effect(db, _eff(effect_value=0.06), prompt_hash="h", model_version="m")
+    edb.save_effect(db, _eff(effect_value=-0.02), prompt_hash="h", model_version="m")
+    assert db.execute("SELECT COUNT(*) FROM effects").fetchone()[0] == 2
+
+
+def test_true_duplicate_still_dedupes(db):
+    # identical on everything, including value: a real duplicate, deduped.
+    for _ in range(3):
+        edb.save_effect(db, _eff(effect_value=0.06), prompt_hash="h", model_version="m")
+    assert db.execute("SELECT COUNT(*) FROM effects").fetchone()[0] == 1
+
+
+def test_study_extracted_flag(db):
+    from extract.tests.conftest import add_included_study
+    rid = add_included_study(db, "10.9/extracted")
+    assert edb.study_extracted(db, rid, "h") is False
+    edb.save_effect(db, _eff(study_id=rid), prompt_hash="h", model_version="m")
+    assert edb.study_extracted(db, rid, "h") is True
+    assert edb.study_extracted(db, rid, "other-hash") is False   # per-prompt
+
+
 def test_retrieval_status_upsert(db):
     edb.record_retrieval(db, "s1", "unretrieved", "nothing")
     edb.record_retrieval(db, "s1", "europepmc_xml", "pmc")

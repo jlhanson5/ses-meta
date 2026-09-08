@@ -46,6 +46,7 @@ class RunReport:
     total_rows: int = 0
     needs_review: int = 0
     unrecognized_cohorts: list[str] = field(default_factory=list)
+    skipped: int = 0
 
 
 def _fetchers(email: str):
@@ -75,8 +76,16 @@ def run_extraction(conn, client: LLMClient, *, fetchers: dict,
     report = RunReport(studies=len(studies), retrieved=0)
     null_counts = {f: 0 for f in PROVENANCE_FIELDS}
     total_numeric_cells = 0
+    skipped = 0
 
     for idx, record in enumerate(records, 1):
+        # idempotency: a study with effects under this prompt hash is done. A
+        # study that yielded nothing (unretrieved or zero effects) is retried.
+        if edb.study_extracted(conn, record["id"], extract_prompt.prompt_hash):
+            skipped += 1
+            if on_progress:
+                on_progress(idx, len(records), record["id"], "already_extracted", 0)
+            continue
         ret = retrieve_one(record, **fetchers)
         edb.record_retrieval(conn, ret.study_id, ret.status, ret.detail)
         if not ret.ok:
@@ -113,11 +122,14 @@ def run_extraction(conn, client: LLMClient, *, fetchers: dict,
 
     report.null_counts = null_counts
     report.unrecognized_cohorts = sorted(set(report.unrecognized_cohorts))
+    report.skipped = skipped
     return report
 
 
 def _print_report(report: RunReport, null_denominator_rows: int) -> None:
     print(f"studies            {report.studies}")
+    if report.skipped:
+        print(f"  already done     {report.skipped} (skipped)")
     print(f"  retrieved        {report.retrieved}")
     print(f"  unretrieved      {len(report.unretrieved)}")
     print(f"effect rows        {report.total_rows}")
