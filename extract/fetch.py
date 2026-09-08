@@ -143,18 +143,50 @@ def unretrievable_report(retrievals: list[Retrieval]) -> list[dict]:
 # live network seams (used on the researcher's machine; blocked in sandbox)
 # --------------------------------------------------------------------------
 
+EFETCH = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi"
+
+
 def live_fetch_xml(email: str) -> FetchXml:
-    from search.http import RateLimiter, get_json
-    limiter = RateLimiter(0.2)
+    """Fetch PMC full-text XML, Europe PMC first, then NCBI EFetch.
+
+    Two real defects this fixes over the naive version:
+      1. Rate-limiting + Retry-After backoff (via search.http.get_text), so a
+         throttled request during a big batch retries instead of silently
+         becoming an 'unretrieved'. That silent-miss-on-throttle was marking
+         available papers as unretrieved.
+      2. When Europe PMC has no OA-subset XML for a resolved PMCID (403/404),
+         fall back to NCBI EFetch (db=pmc), which serves XML for many articles
+         Europe PMC will not.
+    """
+    from search.http import RateLimiter, get_text
+    epmc_limiter = RateLimiter(0.34)      # ~3 req/s, polite for EBI
+    ncbi_limiter = RateLimiter(0.34)      # NCBI allows ~3 req/s without a key
+    ua = {"User-Agent": f"ses-meta/1.0 (mailto:{email})"}
+
+    def _ok(xml: Optional[str]) -> bool:
+        return bool(xml) and "<" in xml and len(xml) > 200
 
     def fetch(pmcid: str) -> Optional[str]:
-        url = f"{EPMC_FULLTEXT}/{pmcid}/fullTextXML"
+        # 1. Europe PMC OA full text
         try:
-            import urllib.request
-            with urllib.request.urlopen(url, timeout=30) as resp:
-                return resp.read().decode("utf-8", "replace")
+            xml = get_text(f"{EPMC_FULLTEXT}/{pmcid}/fullTextXML",
+                           headers=ua, limiter=epmc_limiter)
+            if _ok(xml):
+                return xml
+        except Exception:
+            pass
+        # 2. NCBI EFetch fallback (PMC numeric id, no 'PMC' prefix)
+        numeric = pmcid[3:] if pmcid.upper().startswith("PMC") else pmcid
+        try:
+            xml = get_text(EFETCH, headers=ua, limiter=ncbi_limiter,
+                           params={"db": "pmc", "id": numeric,
+                                   "rettype": "xml", "tool": "ses-meta",
+                                   "email": email})
+            if _ok(xml):
+                return xml
         except Exception:
             return None
+        return None
 
     return fetch
 
