@@ -99,3 +99,23 @@ labeled simulation.
     run.py                     end-to-end CLI
     demo.py                    offline simulation
     evals/                     gold set + eval harness
+
+## Human review editor (curate)
+
+The auto-generated `review_queue.csv` is read-only; human decisions go through
+the curate round-trip, which writes them back to the effects table immutably:
+
+    python -m extract.curate export            # -> extract/review_edit.csv
+    # open in Excel: correct any field, assign sample_overlap_group for
+    # unrecognized cohorts, set review_action per row (keep / edit / drop),
+    # add notes. Do not edit effect_key.
+    python -m extract.curate import extract/review_edit.csv
+
+Import writes changes as human decisions: verified='human', human_reviewed=1,
+needs_review cleared. A human-reviewed row is never re-verified or overwritten by
+a later model run or `reverify` (immutable, like a human screening decision).
+review_action='drop' marks a row excluded from the analysis dataset without
+deleting it. Rows with a blank review_action are left untouched, so review can
+span several sittings. Cohort overlap assignment is folded in via the
+sample_overlap_group column. `data/effects.csv` gains verified / human_reviewed /
+excluded columns so step 4 can filter.

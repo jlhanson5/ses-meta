@@ -34,6 +34,8 @@ def reverify_all(conn, client: LLMClient, *, model: Optional[str] = None) -> dic
     rows = edb.all_effects(conn)
     changed = still_flagged = 0
     for row in rows:
+        if row["human_reviewed"]:
+            continue                        # human decisions are final
         eff = effect_from_row(row)
         verdict = verify_effect(client, verify_prompt, eff, model=model)
         was = bool(row["needs_review"])

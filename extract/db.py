@@ -60,6 +60,9 @@ CREATE TABLE IF NOT EXISTS effects (
     prompt_hash  TEXT,
     model_version TEXT,
     provenance   TEXT,
+    human_reviewed INTEGER NOT NULL DEFAULT 0,
+    excluded     INTEGER NOT NULL DEFAULT 0,
+    review_notes TEXT,
     created_at   TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_effects_study ON effects(study_id);
@@ -86,6 +89,18 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def _migrate(conn: sqlite3.Connection) -> None:
+    """Add human-review columns to an effects table created before they existed."""
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(effects)")}
+    for col, ddl in (("provenance", "TEXT"),
+                     ("human_reviewed", "INTEGER NOT NULL DEFAULT 0"),
+                     ("excluded", "INTEGER NOT NULL DEFAULT 0"),
+                     ("review_notes", "TEXT")):
+        if col not in cols:
+            conn.execute(f"ALTER TABLE effects ADD COLUMN {col} {ddl}")
+    conn.commit()
+
+
 def connect(db_path: Path) -> sqlite3.Connection:
     db_path = Path(db_path)
     db_path.parent.mkdir(parents=True, exist_ok=True)
@@ -93,6 +108,7 @@ def connect(db_path: Path) -> sqlite3.Connection:
     conn.row_factory = sqlite3.Row
     conn.executescript(SCHEMA)
     conn.commit()
+    _migrate(conn)
     return conn
 
 
@@ -176,6 +192,41 @@ def all_effects(conn: sqlite3.Connection) -> list[sqlite3.Row]:
     return conn.execute("SELECT * FROM effects ORDER BY study_id, roi").fetchall()
 
 
+# fields a human may correct in the review editor
+EDITABLE_FIELDS = [
+    "cohort_name", "sample_overlap_group", "n", "mean_age", "age_range",
+    "pct_female", "sample_type", "ses_construct", "ses_timing", "roi",
+    "hemisphere", "volume_pipeline", "icv_adjustment", "covariates",
+    "effect_type", "effect_value", "se_or_ci", "p_value",
+    "direction_coded_positive_means_higher_SES_larger_volume",
+    "page_number", "verbatim_quote",
+]
+
+
+def get_effect_row(conn: sqlite3.Connection, key: str):
+    return conn.execute("SELECT * FROM effects WHERE effect_key=?", (key,)).fetchone()
+
+
+def apply_human_edits(conn: sqlite3.Connection, key: str, updates: dict, *,
+                      excluded: bool = False, notes: str | None = None) -> None:
+    """Write human corrections to one effect and lock it against model runs.
+
+    Sets verified='human', human_reviewed=1, needs_review=0. A human-reviewed row
+    is never re-verified or overwritten by a later model run. `updates` holds
+    only the fields the human changed.
+    """
+    sets, vals = [], []
+    for col, val in updates.items():
+        if col in EDITABLE_FIELDS:
+            sets.append(f"{col}=?")
+            vals.append(val)
+    sets += ["verified='human'", "human_reviewed=1", "needs_review=0",
+             "excluded=?", "review_notes=?"]
+    vals += [int(excluded), notes, key]
+    conn.execute(f"UPDATE effects SET {', '.join(sets)} WHERE effect_key=?", vals)
+    conn.commit()
+
+
 def review_rows(conn: sqlite3.Connection) -> list[sqlite3.Row]:
     return conn.execute(
         "SELECT * FROM effects WHERE needs_review=1 ORDER BY study_id").fetchall()
@@ -198,7 +249,8 @@ def export_effects_csv(conn: sqlite3.Connection, out_path: Path) -> int:
     out_path.parent.mkdir(parents=True, exist_ok=True)
     rows = all_effects(conn)
     export_cols = ["study_id"] + ROW_COLUMNS[1:] + [
-        "verified", "needs_review", "review_reason", "extraction_confidence"]
+        "verified", "human_reviewed", "excluded", "needs_review", "review_reason",
+        "review_notes", "extraction_confidence"]
     # de-dup column names while preserving order
     seen, cols = set(), []
     for c in export_cols:
